@@ -71,6 +71,7 @@ create table if not exists public.produtos (
   quantidade_minima integer not null default 0,
   unidade text not null default 'unidade',
   preco numeric not null default 0,
+  imagem_url text,
   fornecedor text,
   created_at timestamptz not null default now()
 );
@@ -102,7 +103,8 @@ alter table public.pagamentos
 add column if not exists academia_id bigint references public.academias(id);
 
 alter table public.produtos
-add column if not exists academia_id bigint references public.academias(id);
+add column if not exists academia_id bigint references public.academias(id),
+add column if not exists imagem_url text;
 
 insert into public.academias (id, nome, localizacao, telefone, status)
 select 1, 'Academia Principal', '', '', 'ativa'

@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { useStore } from '../store/useStore'
 import { formatCurrency } from '../lib/utils'
 import { Search, Package, ShoppingBag, Filter } from 'lucide-react'
 import { supabase } from '../lib/supabase'
@@ -22,9 +21,8 @@ const categoryColors: Record<string, string> = {
 
 export default function ProductsPage() {
   const { t } = useTranslation()
-  const { stockItems } = useStore()
   const [produtosSupabase, setProdutosSupabase] = useState<any[]>([])
-  const [loadingProdutos, setLoadingProdutos] = useState(true)
+  const [, setLoadingProdutos] = useState(true)
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState<string>('todas')
 
@@ -110,9 +108,18 @@ async function buscarProdutos() {
               key={item.id}
               className="bg-card border border-border rounded-xl overflow-hidden hover:border-primary/50 transition-colors"
             >
-              {/* Product Image Placeholder */}
-              <div className="h-40 bg-muted flex items-center justify-center">
-                <ShoppingBag className="h-16 w-16 text-muted-foreground/50" />
+              {/* Product Image */}
+              <div className="h-40 bg-muted flex items-center justify-center overflow-hidden">
+                {item.imagem_url ? (
+                  <img
+                    src={item.imagem_url}
+                    alt={item.nome}
+                    className="h-full w-full object-cover"
+                    loading="lazy"
+                  />
+                ) : (
+                  <ShoppingBag className="h-16 w-16 text-muted-foreground/50" />
+                )}
               </div>
               
               {/* Product Info */}

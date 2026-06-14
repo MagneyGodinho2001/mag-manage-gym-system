@@ -11,6 +11,7 @@ const common = {
   dashboard: ['Dashboard', 'Dashboard', 'Tableau de bord', 'Panel'],
   athletes: ['Atletas', 'Athletes', 'Athletes', 'Atletas'],
   trainers: ['Treinadores', 'Trainers', 'Entraineurs', 'Entrenadores'],
+  academies: ['Academias', 'Academies', 'Academies', 'Academias'],
   trainings: ['Treinos', 'Trainings', 'Entrainements', 'Entrenamientos'],
   schedules: ['Horários', 'Schedules', 'Horaires', 'Horarios'],
   products: ['Produtos', 'Products', 'Produits', 'Productos'],

@@ -23,6 +23,7 @@ import {
   Sun,
   Moon,
   CreditCard,
+  Building2,
 } from 'lucide-react'
 
 const navItems = [
@@ -45,6 +46,13 @@ const navItems = [
     label: 'Treinadores',
     icon: Users,
     translationKey: 'trainers',
+    roles: ['gestor'],
+  },
+  {
+    path: '/academias',
+    label: 'Academias',
+    icon: Building2,
+    translationKey: 'academies',
     roles: ['gestor'],
   },
   {

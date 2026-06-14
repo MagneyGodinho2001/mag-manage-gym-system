@@ -1461,6 +1461,7 @@ export const useStore = create<AppState>()(
               minQuantity: Number(item.quantidade_minima || 0),
               unit: item.unidade || 'unidade',
               price: Number(item.preco || 0),
+              imageUrl: item.imagem_url || '',
               supplier: item.fornecedor || '',
               createdAt: item.created_at ? new Date(item.created_at) : new Date(),
             })),

@@ -9,6 +9,7 @@ import DashboardLayout from './components/layout/DashboardLayout'
 import DashboardPage from './pages/DashboardPage'
 import AthletesPage from './pages/AthletesPage'
 import TrainersPage from './pages/TrainersPage'
+import AcademiesPage from './pages/AcademiesPage'
 import TrainingsPage from './pages/TrainingsPage'
 import StockPage from './pages/StockPage'
 import ReportsPage from './pages/ReportsPage'
@@ -84,6 +85,11 @@ export default function App() {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'usuarios' },
+        refreshGymData
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'academias' },
         refreshGymData
       )
       .on(
@@ -194,6 +200,15 @@ export default function App() {
         />
 
         {/* Gestor e treinador gerem treinos; atleta usa Horários */}
+        <Route
+          path="academias"
+          element={
+            <ProtectedRoute allowedRoles={['gestor']}>
+              <AcademiesPage />
+            </ProtectedRoute>
+          }
+        />
+
         <Route
           path="treinos"
           element={

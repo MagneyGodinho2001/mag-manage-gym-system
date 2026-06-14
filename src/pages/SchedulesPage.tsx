@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useStore } from '../store/useStore'
 import { format, addDays, startOfWeek, isSameDay, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { Calendar, Clock, User, Users, ChevronLeft, ChevronRight, MapPin } from 'lucide-react'
+import { Calendar, Clock, User, Users, ChevronLeft, ChevronRight, MapPin, CheckCircle2, AlertCircle } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { useTranslation } from '../i18n/useTranslation'
 
@@ -12,7 +12,23 @@ const modalityColors: Record<string, string> = {
   'Boxe': 'bg-amber-500/20 text-amber-400 border-amber-500/30',
   'MMA': 'bg-purple-500/20 text-purple-400 border-purple-500/30',
   'Wrestling': 'bg-green-500/20 text-green-400 border-green-500/30',
+  'Judo': 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
+  'Judô': 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
+  'Funcional': 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
 }
+
+const modalityLegendItems = [
+  { value: 'Jiu-Jitsu', label: 'Jiu-Jitsu' },
+  { value: 'Muay Thai', label: 'Muay Thai' },
+  { value: 'Boxe', label: 'Boxe' },
+  { value: 'MMA', label: 'MMA' },
+  { value: 'Wrestling', label: 'Wrestling' },
+  { value: 'Judo', label: 'Judô' },
+  { value: 'Funcional', label: 'Funcional' },
+]
+
+const formatModalityName = (modality: string) =>
+  modality === 'Judo' ? 'Judô' : modality
 
 export default function SchedulesPage() {
   const { t } = useTranslation()
@@ -51,6 +67,27 @@ export default function SchedulesPage() {
     return grouped
   }, [filteredTrainings, weekDays])
 
+  const weekTrainingCount = filteredTrainings.filter((training) =>
+    weekDays.some((day) => training.date === format(day, 'yyyy-MM-dd'))
+  ).length
+
+  const enrolledThisWeek = currentAthlete
+    ? filteredTrainings.filter((training) =>
+        training.enrolledAthletes.includes(currentAthlete.id) &&
+        weekDays.some((day) => training.date === format(day, 'yyyy-MM-dd'))
+      ).length
+    : 0
+
+  const nextTraining = filteredTrainings
+    .filter((training) => {
+      const trainingDate = parseISO(`${training.date}T${training.startTime || '00:00'}`)
+      return trainingDate.getTime() >= today.getTime()
+    })
+    .sort((a, b) =>
+      parseISO(`${a.date}T${a.startTime || '00:00'}`).getTime() -
+      parseISO(`${b.date}T${b.startTime || '00:00'}`).getTime()
+    )[0]
+
   const isEnrolled = (trainingId: string) => {
     if (!currentAthlete) return false
     const training = trainings.find(t => t.id === trainingId)
@@ -76,7 +113,7 @@ export default function SchedulesPage() {
           >
             <option value="todas">{t('allModalities')}</option>
             {modalities.map(mod => (
-              <option key={mod} value={mod}>{mod}</option>
+              <option key={mod} value={mod}>{formatModalityName(mod)}</option>
             ))}
           </select>
         </div>
@@ -212,7 +249,7 @@ export default function SchedulesPage() {
                         <div className="flex items-start justify-between">
                           <div>
                             <p className="font-semibold">{training.title}</p>
-                            <p className="text-sm opacity-75">{training.modality}</p>
+                            <p className="text-sm opacity-75">{formatModalityName(training.modality)}</p>
                           </div>
                           {isEnrolled(training.id) && (
                             <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">
@@ -251,9 +288,9 @@ export default function SchedulesPage() {
       <div className="bg-card border border-border rounded-lg p-4">
         <h3 className="font-medium text-foreground mb-3">{t('modalityLegend')}</h3>
         <div className="flex flex-wrap gap-3">
-          {Object.entries(modalityColors).map(([modality, colors]) => (
-            <span key={modality} className={cn('px-3 py-1.5 rounded-full text-sm border', colors)}>
-              {modality}
+          {modalityLegendItems.map(({ value, label }) => (
+            <span key={value} className={cn('px-3 py-1.5 rounded-full text-sm border', modalityColors[value])}>
+              {label}
             </span>
           ))}
         </div>
@@ -265,16 +302,57 @@ export default function SchedulesPage() {
         </div>
       </div>
 
-      {/* Info */}
-      <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
-        <div className="flex items-start gap-3">
-          <MapPin className="h-5 w-5 text-primary mt-0.5" />
+      {/* Training guidance */}
+      <div className="bg-card border border-border rounded-xl p-4">
+        <div className="flex items-start gap-3 mb-4">
+          <AlertCircle className="h-5 w-5 text-primary mt-0.5" />
           <div>
-            <h4 className="font-medium text-foreground">Informacoes Importantes</h4>
+            <h4 className="font-medium text-foreground">Informações importantes</h4>
             <p className="text-sm text-muted-foreground mt-1">
-              {t('schedulesHelp')}
+              Consulte os horários, confirme a modalidade e chegue com antecedência para preparar o material.
             </p>
           </div>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-lg border border-border bg-secondary/40 p-3">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Calendar className="h-4 w-4 text-primary" />
+              Treinos na semana
+            </div>
+            <p className="mt-1 text-2xl font-bold text-foreground">{weekTrainingCount}</p>
+          </div>
+
+          <div className="rounded-lg border border-border bg-secondary/40 p-3">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <CheckCircle2 className="h-4 w-4 text-primary" />
+              Inscrições do atleta
+            </div>
+            <p className="mt-1 text-2xl font-bold text-foreground">{enrolledThisWeek}</p>
+          </div>
+
+          <div className="rounded-lg border border-border bg-secondary/40 p-3">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Clock className="h-4 w-4 text-primary" />
+              Próximo treino
+            </div>
+            <p className="mt-1 text-sm font-semibold text-foreground">
+              {nextTraining
+                ? `${format(parseISO(nextTraining.date), 'dd/MM')} às ${nextTraining.startTime}`
+                : 'Sem treino marcado'}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
+          <p className="flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-primary" />
+            Em caso de alteração, confirme o horário com o treinador.
+          </p>
+          <p className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-primary" />
+            A lotação mostra quantos atletas já estão inscritos no treino.
+          </p>
         </div>
       </div>
     </div>

@@ -128,6 +128,7 @@ export interface StockItem {
   minQuantity: number
   unit: string
   price: number
+  imageUrl?: string
   supplier?: string
   lastRestocked?: string
   createdAt: Date

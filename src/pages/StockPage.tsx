@@ -4,6 +4,7 @@ import { cn, formatCurrency, formatDate } from '../lib/utils'
 import type { StockItem } from '../types'
 import {
   Package,
+  Image as ImageIcon,
   Plus,
   Edit2,
   Trash2,
@@ -84,6 +85,7 @@ const carregarProdutos = async () => {
     unit: item.unidade || 'unidade',
     price: Number(item.preco || 0),
     supplier: item.fornecedor || '',
+    imageUrl: item.imagem_url || '',
     createdAt: item.created_at,
   }))
 
@@ -165,7 +167,7 @@ const carregarProdutos = async () => {
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold text-foreground">{t('stockTitle')}</h1>
 <p className="text-muted-foreground">
-  {loading ? 'Carregando itens...' : `${stockItems.length} itens cadastrados`}
+  {loading ? 'A carregar itens...' : `${stockItems.length} itens cadastrados`}
 </p>
         </div>
         {canEdit && (
@@ -185,7 +187,7 @@ const carregarProdutos = async () => {
           <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0" />
           <div className="flex-1">
             <p className="text-sm font-medium text-destructive">
-              {lowStockCount} {lowStockCount === 1 ? 'item precisa' : 'itens precisam'} ser reabastecido
+              {lowStockCount} {lowStockCount === 1 ? 'item precisa' : 'itens precisam'} ser {lowStockCount === 1 ? 'reabastecido' : 'reabastecidos'}
             </p>
           </div>
           <button
@@ -242,9 +244,9 @@ const carregarProdutos = async () => {
                   <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Item</th>
                   <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Categoria</th>
                   <th className="text-center px-4 py-3 text-sm font-medium text-muted-foreground">Quantidade</th>
-                  <th className="text-right px-4 py-3 text-sm font-medium text-muted-foreground">Preco Unit.</th>
+                  <th className="text-right px-4 py-3 text-sm font-medium text-muted-foreground">Preço Unit.</th>
                   <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Fornecedor</th>
-                  <th className="text-right px-4 py-3 text-sm font-medium text-muted-foreground">Acoes</th>
+                  <th className="text-right px-4 py-3 text-sm font-medium text-muted-foreground">Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -253,13 +255,17 @@ const carregarProdutos = async () => {
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-3">
                         <div className={cn(
-                          'flex h-10 w-10 items-center justify-center rounded-lg',
+                          'flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg',
                           item.quantity <= item.minQuantity ? 'bg-destructive/20' : 'bg-primary/20'
                         )}>
-                          <Package className={cn(
-                            'h-5 w-5',
-                            item.quantity <= item.minQuantity ? 'text-destructive' : 'text-primary'
-                          )} />
+                          {item.imageUrl ? (
+                            <img src={item.imageUrl} alt={item.name} className="h-full w-full object-cover" loading="lazy" />
+                          ) : (
+                            <Package className={cn(
+                              'h-5 w-5',
+                              item.quantity <= item.minQuantity ? 'text-destructive' : 'text-primary'
+                            )} />
+                          )}
                         </div>
                         <div>
                           <p className="font-medium text-foreground">{item.name}</p>
@@ -301,7 +307,7 @@ const carregarProdutos = async () => {
                         <button
                           onClick={() => handleMovement(item, 'saida')}
                           className="p-2 hover:bg-destructive/10 rounded-lg transition-colors"
-                          title="Saida"
+                          title="Saída"
                         >
                           <ArrowDownCircle className="h-4 w-4 text-destructive" />
                         </button>
@@ -324,7 +330,7 @@ const carregarProdutos = async () => {
                                   className="flex items-center gap-2 w-full px-3 py-2 text-sm text-foreground hover:bg-secondary transition-colors"
                                 >
                                   <History className="h-4 w-4" />
-                                  Historico
+                                  Histórico
                                 </button>
                                 {canEdit && (
                                   <>
@@ -371,7 +377,11 @@ const carregarProdutos = async () => {
         nome: data.name,
         categoria: data.category,
         quantidade: data.quantity,
+        quantidade_minima: data.minQuantity,
+        unidade: data.unit,
         preco: data.price,
+        fornecedor: data.supplier,
+        imagem_url: data.imageUrl,
       }
 
       if (selectedItem) {
@@ -539,6 +549,7 @@ function StockItemModal({ item, onClose, onSave }: StockItemModalProps) {
     unit: item?.unit || 'unidade',
     price: item?.price || 0,
     supplier: item?.supplier || '',
+    imageUrl: item?.imageUrl || '',
   })
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -569,6 +580,31 @@ function StockItemModal({ item, onClose, onSave }: StockItemModalProps) {
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               className="w-full px-4 py-2.5 bg-input border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Imagem do produto</label>
+            <div className="flex gap-3">
+              <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-secondary">
+                {formData.imageUrl ? (
+                  <img src={formData.imageUrl} alt="Pré-visualização do produto" className="h-full w-full object-cover" />
+                ) : (
+                  <ImageIcon className="h-7 w-7 text-muted-foreground" />
+                )}
+              </div>
+              <div className="flex-1">
+                <input
+                  type="url"
+                  value={formData.imageUrl}
+                  onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-input border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  placeholder="https://exemplo.com/imagem-do-produto.jpg"
+                />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Cole aqui o link de uma imagem para aparecer no stock e no catálogo.
+                </p>
+              </div>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -742,7 +778,7 @@ function MovementModal({ item, type, userId, onClose, onSave }: MovementModalPro
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               className="w-full px-4 py-2.5 bg-input border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder={type === 'entrada' ? 'Ex: Reposicao de estoque' : 'Ex: Uso em treino'}
+              placeholder={type === 'entrada' ? 'Ex: Reposição de estoque' : 'Ex: Uso em treino'}
             />
           </div>
 
