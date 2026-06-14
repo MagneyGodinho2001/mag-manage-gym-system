@@ -69,6 +69,7 @@ export interface Athlete {
   birthDate: string
   belt: string
   modality: string
+  academyId?: string | number
   startDate: string
   status: 'ativo' | 'inativo'
   photo?: string
@@ -98,6 +99,7 @@ export interface Training {
   startTime: string
   endTime: string
   instructor: string
+  academyId?: string | number
   maxCapacity: number
   enrolledAthletes: string[]
 

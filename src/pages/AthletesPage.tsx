@@ -40,6 +40,7 @@ export default function AthletesPage() {
   const { t } = useTranslation()
 
   const [membrosSupabase, setMembrosSupabase] = useState<any[]>([])
+  const [academias, setAcademias] = useState<any[]>([])
   const [loadingMembros, setLoadingMembros] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -58,7 +59,24 @@ export default function AthletesPage() {
 
   useEffect(() => {
     buscarMembros()
+    buscarAcademias()
   }, [])
+
+  async function buscarAcademias() {
+    const { data, error } = await supabase
+      .from('academias')
+      .select('*')
+      .eq('status', 'ativa')
+      .order('nome', { ascending: true })
+
+    if (error) {
+      console.log('Erro ao buscar academias:', error)
+      setAcademias([{ id: 1, nome: 'Academia Principal' }])
+      return
+    }
+
+    setAcademias(data?.length ? data : [{ id: 1, nome: 'Academia Principal' }])
+  }
 
   useEffect(() => {
     buscarModalidadeTreinador()
@@ -258,6 +276,7 @@ export default function AthletesPage() {
             email: data.email,
             plano: data.belt,
             modalidade: data.modality,
+            academia_id: Number(data.academia_id || 1),
             status: data.status || 'ativo',
           })
           .eq('id', selectedAthlete.id)
@@ -327,6 +346,7 @@ export default function AthletesPage() {
             email: emailNormalizado,
             plano: data.belt,
             modalidade: data.modality,
+            academia_id: Number(data.academia_id || 1),
             status: data.status || 'ativo',
           },
         ])
@@ -375,6 +395,10 @@ export default function AthletesPage() {
       return pointsB - pointsA
     })
   }, [roleVisibleAthletes])
+
+  const getAcademiaNome = (academiaId: any) =>
+    academias.find((academia) => String(academia.id) === String(academiaId || 1))?.nome ||
+    'Academia Principal'
 
   return (
     <div className="space-y-6">
@@ -528,11 +552,14 @@ export default function AthletesPage() {
                     <h3 className="font-semibold text-foreground">
                       {athlete.nome || athlete.name}
                     </h3>
-                    <p className="text-sm text-muted-foreground">
-                      {athlete.modalidade || athlete.modality || 'Sem modalidade'}
-                    </p>
+                      <p className="text-sm text-muted-foreground">
+                        {athlete.modalidade || athlete.modality || 'Sem modalidade'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {getAcademiaNome(athlete.academia_id)}
+                      </p>
+                    </div>
                   </div>
-                </div>
 
                 <div className="relative">
                   <button
@@ -634,6 +661,7 @@ export default function AthletesPage() {
       {showModal && (
         <AthleteModal
           athlete={selectedAthlete}
+          academias={academias}
           saving={saving}
           onClose={() => {
             if (saving) return
@@ -698,12 +726,13 @@ export default function AthletesPage() {
 
 interface AthleteModalProps {
   athlete: any | null
+  academias: any[]
   saving: boolean
   onClose: () => void
   onSave: (data: any) => void
 }
 
-function AthleteModal({ athlete, saving, onClose, onSave }: AthleteModalProps) {
+function AthleteModal({ athlete, academias, saving, onClose, onSave }: AthleteModalProps) {
   const { t } = useTranslation()
   const isEditing = Boolean(athlete)
 
@@ -714,6 +743,7 @@ function AthleteModal({ athlete, saving, onClose, onSave }: AthleteModalProps) {
     birthDate: athlete?.birthDate || '',
     belt: athlete?.plano || athlete?.belt || 'Branca',
     modality: athlete?.modalidade || athlete?.modality || 'Jiu-Jitsu',
+    academia_id: String(athlete?.academia_id || 1),
     startDate: athlete?.startDate || new Date().toISOString().split('T')[0],
     status: (athlete?.status || 'ativo') as 'ativo' | 'inativo',
     notes: athlete?.notes || '',
@@ -855,6 +885,24 @@ function AthleteModal({ athlete, saving, onClose, onSave }: AthleteModalProps) {
                 {belts.map((b) => (
                   <option key={b} value={b}>
                     {b}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                Academia
+              </label>
+              <select
+                disabled={saving}
+                value={formData.academia_id}
+                onChange={(e) => setFormData({ ...formData, academia_id: e.target.value })}
+                className="w-full px-4 py-2.5 bg-input border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+              >
+                {academias.map((academia) => (
+                  <option key={academia.id} value={String(academia.id)}>
+                    {academia.nome}
                   </option>
                 ))}
               </select>

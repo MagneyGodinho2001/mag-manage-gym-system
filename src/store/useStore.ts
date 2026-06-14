@@ -173,6 +173,7 @@ function mapMemberToAthlete(member: any): Athlete {
     birthDate: member.data_nascimento || '',
     belt: member.faixa || member.plano || '',
     modality: member.modalidade || member.modality || '',
+    academyId: member.academia_id || member.academyId || 1,
     startDate: member.created_at
       ? String(member.created_at).split('T')[0]
       : new Date().toISOString().split('T')[0],
@@ -192,6 +193,7 @@ function mapTrainingFromSupabase(row: any): Training {
     startTime: row.start_time || row.hora_inicio || '',
     endTime: row.end_time || row.hora_fim || '',
     instructor: row.instructor || row.instrutor || '',
+    academyId: row.academia_id || row.academyId || 1,
     maxCapacity: Number(row.max_capacity || row.capacidade_maxima || 1),
     enrolledAthletes: Array.isArray(row.enrolled_athletes)
       ? row.enrolled_athletes.map(String)
@@ -212,6 +214,7 @@ function mapTrainingToSupabase(training: Training) {
     end_time: training.endTime,
     instructor: training.instructor,
     max_capacity: training.maxCapacity,
+    academia_id: (training as any).academyId || 1,
     enrolled_athletes: training.enrolledAthletes || [],
     attendance: training.attendance || {},
     description: training.description || '',
@@ -929,6 +932,7 @@ export const useStore = create<AppState>()(
                 email: emailNormalizado,
                 senha: registration.password,
                 approval_status: 'aprovado',
+                academia_id: 1,
                 plano: 'Branca',
                 modalidade: registration.modality || 'Mensal',
                 status: 'ativo',
@@ -955,6 +959,7 @@ export const useStore = create<AppState>()(
                 email: emailNormalizado,
                 senha: registration.password,
                 approval_status: 'aprovado',
+                academia_id: 1,
                 role: 'treinador',
                 especialidade: registration.modality || '',
                 status: 'ativo',
@@ -1015,6 +1020,7 @@ export const useStore = create<AppState>()(
               telefone: data.phone || '',
               senha: data.password,
               approval_status: 'aprovado',
+              academia_id: 1,
             })
             .ilike('email', emailNormalizado)
             .then(({ error }) => {
@@ -1040,6 +1046,7 @@ export const useStore = create<AppState>()(
                 role: data.role,
                 status: 'ativo',
                 approval_status: 'aprovado',
+                academia_id: 1,
               }
 
               const result = existingRows?.[0]

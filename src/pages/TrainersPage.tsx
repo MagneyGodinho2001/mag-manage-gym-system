@@ -25,6 +25,8 @@ export default function TrainersPage() {
   const { createApprovedUser } = useStore()
 
   const [trainers, setTrainers] = useState<any[]>([])
+  const [academias, setAcademias] = useState<any[]>([])
+  const [athletesByAcademy, setAthletesByAcademy] = useState<Record<string, number>>({})
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -40,6 +42,7 @@ export default function TrainersPage() {
     email: '',
     telefone: '',
     especialidade: '',
+    academia_id: '1',
     senha: '',
     status: 'ativo',
   })
@@ -49,6 +52,7 @@ export default function TrainersPage() {
     email: '',
     telefone: '',
     especialidade: '',
+    academia_id: '1',
     status: 'ativo',
   })
 
@@ -59,7 +63,44 @@ export default function TrainersPage() {
 
   useEffect(() => {
     carregarTreinadores()
+    carregarAcademias()
+    carregarContagemAtletasPorAcademia()
   }, [])
+
+  const carregarAcademias = async () => {
+    const { data, error } = await supabase
+      .from('academias')
+      .select('*')
+      .eq('status', 'ativa')
+      .order('nome', { ascending: true })
+
+    if (error) {
+      console.log('Erro ao carregar academias:', error)
+      setAcademias([{ id: 1, nome: 'Academia Principal' }])
+      return
+    }
+
+    setAcademias(data?.length ? data : [{ id: 1, nome: 'Academia Principal' }])
+  }
+
+  const carregarContagemAtletasPorAcademia = async () => {
+    const { data, error } = await supabase
+      .from('membros')
+      .select('academia_id')
+
+    if (error) {
+      console.log('Erro ao contar atletas por academia:', error)
+      return
+    }
+
+    const counts = (data || []).reduce((acc: Record<string, number>, member: any) => {
+      const key = String(member.academia_id || 1)
+      acc[key] = (acc[key] || 0) + 1
+      return acc
+    }, {})
+
+    setAthletesByAcademy(counts)
+  }
 
   const carregarTreinadores = async () => {
     setLoading(true)
@@ -112,6 +153,7 @@ export default function TrainersPage() {
       email: '',
       telefone: '',
       especialidade: '',
+      academia_id: '1',
       senha: '',
       status: 'ativo',
     })
@@ -183,6 +225,7 @@ export default function TrainersPage() {
             telefone: formData.telefone,
             role: 'treinador',
             especialidade: formData.especialidade,
+            academia_id: Number(formData.academia_id || 1),
             status: formData.status,
           },
         ])
@@ -207,6 +250,7 @@ export default function TrainersPage() {
       setShowAddModal(false)
       resetForm()
       await carregarTreinadores()
+      await carregarContagemAtletasPorAcademia()
     } catch (error: any) {
       console.log('Erro inesperado ao criar treinador:', error)
       alert('Erro inesperado ao criar treinador: ' + error.message)
@@ -222,6 +266,7 @@ export default function TrainersPage() {
       email: trainer.email || '',
       telefone: trainer.telefone || '',
       especialidade: trainer.especialidade || '',
+      academia_id: String(trainer.academia_id || 1),
       status: trainer.status || 'ativo',
     })
     setShowEditModal(true)
@@ -250,6 +295,7 @@ export default function TrainersPage() {
           email: emailNormalizado,
           telefone: editData.telefone,
           especialidade: editData.especialidade,
+          academia_id: Number(editData.academia_id || 1),
           status: editData.status,
         })
         .eq('id', selectedTrainer.id)
@@ -265,6 +311,7 @@ export default function TrainersPage() {
       setShowEditModal(false)
       setSelectedTrainer(null)
       await carregarTreinadores()
+      await carregarContagemAtletasPorAcademia()
     } catch (error: any) {
       console.log('Erro inesperado ao editar treinador:', error)
       alert('Erro inesperado ao editar treinador: ' + error.message)
@@ -352,10 +399,15 @@ export default function TrainersPage() {
 
     alert('Treinador apagado com sucesso.')
     await carregarTreinadores()
+    await carregarContagemAtletasPorAcademia()
   }
 
   const activeCount = trainers.filter((t: any) => t.status === 'ativo').length
   const inactiveCount = trainers.filter((t: any) => t.status === 'inativo').length
+
+  const getAcademiaNome = (academiaId: any) =>
+    academias.find((academia) => String(academia.id) === String(academiaId || 1))?.nome ||
+    'Academia Principal'
 
   return (
     <div className="space-y-6">
@@ -466,6 +518,9 @@ export default function TrainersPage() {
                     Especialidade
                   </th>
                   <th className="text-left p-4 text-sm font-medium text-muted-foreground">
+                    Academia
+                  </th>
+                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">
                     Status
                   </th>
                   <th className="text-right p-4 text-sm font-medium text-muted-foreground">
@@ -511,6 +566,15 @@ export default function TrainersPage() {
                       <p className="flex items-center gap-2 text-sm text-foreground">
                         <Award className="h-4 w-4 text-muted-foreground" />
                         {trainer.especialidade || 'Sem especialidade'}
+                      </p>
+                    </td>
+
+                    <td className="p-4">
+                      <p className="text-sm font-medium text-foreground">
+                        {getAcademiaNome(trainer.academia_id)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {athletesByAcademy[String(trainer.academia_id || 1)] || 0} atletas
                       </p>
                     </td>
 
@@ -580,6 +644,7 @@ export default function TrainersPage() {
           saving={saving}
           data={formData}
           setData={setFormData}
+          academias={academias}
           onClose={() => {
             if (!saving) setShowAddModal(false)
           }}
@@ -596,6 +661,7 @@ export default function TrainersPage() {
           saving={saving}
           data={editData}
           setData={setEditData}
+          academias={academias}
           onClose={() => {
             if (!saving) {
               setShowEditModal(false)
@@ -710,6 +776,7 @@ function TrainerFormModal({
   saving,
   data,
   setData,
+  academias,
   onClose,
   onSubmit,
   submitText,
@@ -719,6 +786,7 @@ function TrainerFormModal({
   saving: boolean
   data: any
   setData: (data: any) => void
+  academias: any[]
   onClose: () => void
   onSubmit: (e: React.FormEvent) => void
   submitText: string
@@ -805,6 +873,25 @@ function TrainerFormModal({
               {modalidades.map((modalidade) => (
                 <option key={modalidade} value={modalidade}>
                   {modalidade}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1.5">
+              Academia
+            </label>
+            <select
+              value={data.academia_id || '1'}
+              onChange={(e) => setData({ ...data, academia_id: e.target.value })}
+              required
+              disabled={saving}
+              className="w-full px-4 py-2 bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+            >
+              {academias.map((academia) => (
+                <option key={academia.id} value={String(academia.id)}>
+                  {academia.nome}
                 </option>
               ))}
             </select>
