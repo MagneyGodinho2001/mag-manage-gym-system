@@ -529,14 +529,19 @@ const rejeitarPedidoProduto = async (pedido: any) => {
     }}
     onSave={async (data) => {
       const produtoSupabase = {
-        nome: data.name,
-        categoria: data.category,
-        quantidade: data.quantity,
-        quantidade_minima: data.minQuantity,
-        unidade: data.unit,
-        preco: data.price,
-        fornecedor: data.supplier,
-        imagem_url: data.imageUrl,
+        nome: String(data.name || '').trim(),
+        categoria: data.category || 'outro',
+        quantidade: Number(data.quantity || 0),
+        quantidade_minima: Number(data.minQuantity || 0),
+        unidade: String(data.unit || 'unidade').trim(),
+        preco: Number(data.price || 0),
+        fornecedor: String(data.supplier || '').trim(),
+        imagem_url: String(data.imageUrl || '').trim(),
+      }
+
+      if (!produtoSupabase.nome) {
+        alert('Informe o nome do produto.')
+        return
       }
 
       if (selectedItem) {
@@ -551,14 +556,9 @@ const rejeitarPedidoProduto = async (pedido: any) => {
           return
         }
       } else {
-        const novoProduto = {
-          id: Date.now(),
-          ...produtoSupabase,
-        }
-
         const { error } = await supabase
           .from('produtos')
-          .insert([novoProduto])
+          .insert([produtoSupabase])
 
         if (error) {
           console.error('Erro ao adicionar produto:', error)
@@ -691,7 +691,7 @@ onSave={async (movement) => {
 interface StockItemModalProps {
   item: StockItem | null
   onClose: () => void
-  onSave: (data: Partial<StockItem>) => void
+  onSave: (data: Partial<StockItem>) => void | Promise<void>
 }
 
 function StockItemModal({ item, onClose, onSave }: StockItemModalProps) {
@@ -719,9 +719,9 @@ function StockItemModal({ item, onClose, onSave }: StockItemModalProps) {
           ? await uploadImageFile(imageFile, 'produtos')
           : formData.imageUrl
 
-        onSave({ ...formData, imageUrl })
+        await onSave({ ...formData, imageUrl })
       } catch (error: any) {
-        alert(error.message || 'Erro ao enviar imagem.')
+        alert(error.message || 'Erro ao guardar produto.')
       } finally {
         setUploadingImage(false)
       }
@@ -736,7 +736,12 @@ function StockItemModal({ item, onClose, onSave }: StockItemModalProps) {
           <h2 className="text-xl font-semibold text-foreground">
             {item ? t('editItem') : t('newItem')}
           </h2>
-          <button onClick={onClose} className="p-2 hover:bg-secondary rounded-lg transition-colors">
+          <button
+            type="button"
+            disabled={uploadingImage}
+            onClick={onClose}
+            className="p-2 hover:bg-secondary rounded-lg transition-colors disabled:opacity-50"
+          >
             <X className="h-5 w-5 text-muted-foreground" />
           </button>
         </div>

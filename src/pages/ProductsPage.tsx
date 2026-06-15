@@ -157,6 +157,24 @@ export default function ProductsPage() {
         return
       }
 
+      const { data: gestores, error: gestoresError } = await supabase
+        .from('usuarios')
+        .select('id')
+        .eq('role', 'gestor')
+
+      if (!gestoresError && gestores?.length) {
+        await supabase.from('notifications').insert(
+          gestores.map((gestor: any) => ({
+            id: crypto.randomUUID(),
+            user_id: String(gestor.id),
+            title: 'Novo pedido de produto',
+            message: `${user.name} enviou um pedido de ${orderQuantity} unidade(s) de ${purchaseProduct.nome}. Verifique o comprovativo em Stock.`,
+            type: 'info',
+            read: false,
+          }))
+        )
+      }
+
       await buscarPedidos()
       closePurchase()
       alert('Pedido enviado com sucesso. Aguarde a confirmação do gestor.')

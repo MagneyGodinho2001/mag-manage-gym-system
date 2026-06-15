@@ -152,6 +152,8 @@ export default function DashboardLayout() {
     atleta: 'Atleta',
   }
 
+  const userAvatar = user?.avatar || ''
+
   return (
     <div className="flex h-screen bg-background">
       {/* Desktop Sidebar */}
@@ -243,12 +245,7 @@ export default function DashboardLayout() {
               )
             }
           >
-            <div
-              className="flex h-8 w-8 items-center justify-center rounded-full"
-              style={{ backgroundColor: 'rgba(34, 197, 94, 0.2)' }}
-            >
-              <User className="h-4 w-4 text-primary" />
-            </div>
+            <ProfileAvatar src={userAvatar} name={user?.name} size="sm" />
 
             {sidebarOpen && (
               <div className="flex-1 min-w-0">
@@ -345,12 +342,7 @@ export default function DashboardLayout() {
                 )
               }
             >
-              <div
-                className="flex h-8 w-8 items-center justify-center rounded-full"
-                style={{ backgroundColor: 'rgba(34, 197, 94, 0.2)' }}
-              >
-                <User className="h-4 w-4 text-primary" />
-              </div>
+              <ProfileAvatar src={userAvatar} name={user?.name} size="sm" />
 
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{user?.name}</p>
@@ -522,6 +514,39 @@ export default function DashboardLayout() {
           <Outlet />
         </main>
       </div>
+    </div>
+  )
+}
+
+function ProfileAvatar({
+  src,
+  name,
+  size = 'sm',
+}: {
+  src?: string
+  name?: string
+  size?: 'sm' | 'md'
+}) {
+  const sizeClass = size === 'md' ? 'h-10 w-10' : 'h-8 w-8'
+  const iconClass = size === 'md' ? 'h-5 w-5' : 'h-4 w-4'
+
+  return (
+    <div
+      className={cn(
+        'flex shrink-0 items-center justify-center overflow-hidden rounded-full',
+        sizeClass
+      )}
+      style={{ backgroundColor: 'rgba(34, 197, 94, 0.2)' }}
+    >
+      {src ? (
+        <img
+          src={src}
+          alt={name || 'Foto do perfil'}
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        <User className={cn(iconClass, 'text-primary')} />
+      )}
     </div>
   )
 }
