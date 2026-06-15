@@ -17,7 +17,9 @@ import {
   Trophy,
   MoreVertical,
   Eye,
+  Image as ImageIcon,
 } from 'lucide-react'
+import { uploadImageFile } from '../lib/uploadImage'
 
 const modalities = ['Jiu-Jitsu', 'Muay Thai', 'Boxe', 'MMA', 'Wrestling', 'Judo']
 const belts = [
@@ -277,6 +279,7 @@ export default function AthletesPage() {
             plano: data.belt,
             modalidade: data.modality,
             academia_id: Number(data.academia_id || 1),
+            foto_url: data.photo || '',
             status: data.status || 'ativo',
           })
           .eq('id', selectedAthlete.id)
@@ -347,6 +350,7 @@ export default function AthletesPage() {
             plano: data.belt,
             modalidade: data.modality,
             academia_id: Number(data.academia_id || 1),
+            foto_url: data.photo || '',
             status: data.status || 'ativo',
           },
         ])
@@ -544,8 +548,17 @@ export default function AthletesPage() {
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/20">
-                    <User className="h-6 w-6 text-primary" />
+                  <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-primary/20">
+                    {athlete.foto_url || athlete.photo ? (
+                      <img
+                        src={athlete.foto_url || athlete.photo}
+                        alt={athlete.nome || athlete.name}
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <User className="h-6 w-6 text-primary" />
+                    )}
                   </div>
 
                   <div>
@@ -729,12 +742,15 @@ interface AthleteModalProps {
   academias: any[]
   saving: boolean
   onClose: () => void
-  onSave: (data: any) => void
+  onSave: (data: any) => void | Promise<void>
 }
 
 function AthleteModal({ athlete, academias, saving, onClose, onSave }: AthleteModalProps) {
   const { t } = useTranslation()
   const isEditing = Boolean(athlete)
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState(athlete?.foto_url || athlete?.photo || '')
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
 
   const [formData, setFormData] = useState({
     name: athlete?.nome || athlete?.name || '',
@@ -747,20 +763,32 @@ function AthleteModal({ athlete, academias, saving, onClose, onSave }: AthleteMo
     startDate: athlete?.startDate || new Date().toISOString().split('T')[0],
     status: (athlete?.status || 'ativo') as 'ativo' | 'inativo',
     notes: athlete?.notes || '',
+    photo: athlete?.foto_url || athlete?.photo || '',
     password: '',
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (saving) return
+    if (saving || uploadingPhoto) return
 
     if (!isEditing && !formData.password) {
       alert('Informe a senha inicial do atleta.')
       return
     }
 
-    onSave(formData)
+    try {
+      setUploadingPhoto(true)
+      const photo = photoFile
+        ? await uploadImageFile(photoFile, 'atletas')
+        : formData.photo
+
+      await onSave({ ...formData, photo })
+    } catch (error: any) {
+      alert(error.message || 'Erro ao enviar foto.')
+    } finally {
+      setUploadingPhoto(false)
+    }
   }
 
   return (
@@ -785,6 +813,40 @@ function AthleteModal({ athlete, academias, saving, onClose, onSave }: AthleteMo
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="grid sm:grid-cols-2 gap-4">
+            <div className="sm:col-span-2">
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                Foto do atleta
+              </label>
+              <div className="flex gap-3">
+                <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-secondary">
+                  {previewUrl ? (
+                    <img src={previewUrl} alt="Pré-visualização do atleta" className="h-full w-full object-cover" />
+                  ) : (
+                    <ImageIcon className="h-7 w-7 text-muted-foreground" />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={saving || uploadingPhoto}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null
+                      setPhotoFile(file)
+                      if (file) {
+                        setPreviewUrl(URL.createObjectURL(file))
+                        setFormData({ ...formData, photo: '' })
+                      }
+                    }}
+                    className="w-full text-sm text-muted-foreground file:mr-3 file:rounded-lg file:border-0 file:bg-primary file:px-3 file:py-2 file:text-sm file:font-medium file:text-primary-foreground"
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Escolha uma foto do computador para identificar o atleta.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-foreground mb-1.5">
                 {t('fullName')}
@@ -962,7 +1024,7 @@ function AthleteModal({ athlete, academias, saving, onClose, onSave }: AthleteMo
           <div className="flex gap-3 justify-end pt-4">
             <button
               type="button"
-              disabled={saving}
+              disabled={saving || uploadingPhoto}
               onClick={onClose}
               className="px-4 py-2.5 text-foreground hover:bg-secondary rounded-lg transition-colors disabled:opacity-50"
             >
@@ -971,10 +1033,10 @@ function AthleteModal({ athlete, academias, saving, onClose, onSave }: AthleteMo
 
             <button
               type="submit"
-              disabled={saving}
+              disabled={saving || uploadingPhoto}
               className="px-6 py-2.5 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
             >
-              {saving ? 'A guardar...' : isEditing ? t('save') : t('register')}
+              {saving || uploadingPhoto ? 'A guardar...' : isEditing ? t('save') : t('register')}
             </button>
           </div>
         </form>
@@ -1004,8 +1066,16 @@ function ViewAthleteModal({ athlete, onClose }: ViewAthleteModalProps) {
 
         <div className="p-6">
           <div className="flex items-center gap-4 mb-6">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/20">
-              <User className="h-8 w-8 text-primary" />
+            <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-primary/20">
+              {athlete.foto_url || athlete.photo ? (
+                <img
+                  src={athlete.foto_url || athlete.photo}
+                  alt={athlete.nome || athlete.name}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <User className="h-8 w-8 text-primary" />
+              )}
             </div>
 
             <div>

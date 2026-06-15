@@ -89,12 +89,14 @@ create table if not exists public.movimentos_estoque (
 alter table public.usuarios
 add column if not exists senha text,
 add column if not exists approval_status text not null default 'aprovado',
-add column if not exists academia_id bigint references public.academias(id);
+add column if not exists academia_id bigint references public.academias(id),
+add column if not exists avatar_url text;
 
 alter table public.membros
 add column if not exists senha text,
 add column if not exists approval_status text not null default 'aprovado',
-add column if not exists academia_id bigint references public.academias(id);
+add column if not exists academia_id bigint references public.academias(id),
+add column if not exists foto_url text;
 
 alter table public.treinos
 add column if not exists academia_id bigint references public.academias(id);
@@ -133,6 +135,11 @@ where academia_id is null;
 update public.produtos
 set academia_id = 1
 where academia_id is null;
+
+insert into storage.buckets (id, name, public)
+values ('magmanage-images', 'magmanage-images', true)
+on conflict (id) do update
+set public = true;
 
 insert into public.usuarios (
   id,
@@ -270,3 +277,32 @@ for all
 to anon
 using (true)
 with check (true);
+
+drop policy if exists "Permitir leitura imagens MagManage" on storage.objects;
+create policy "Permitir leitura imagens MagManage"
+on storage.objects
+for select
+to anon
+using (bucket_id = 'magmanage-images');
+
+drop policy if exists "Permitir inserir imagens MagManage" on storage.objects;
+create policy "Permitir inserir imagens MagManage"
+on storage.objects
+for insert
+to anon
+with check (bucket_id = 'magmanage-images');
+
+drop policy if exists "Permitir atualizar imagens MagManage" on storage.objects;
+create policy "Permitir atualizar imagens MagManage"
+on storage.objects
+for update
+to anon
+using (bucket_id = 'magmanage-images')
+with check (bucket_id = 'magmanage-images');
+
+drop policy if exists "Permitir apagar imagens MagManage" on storage.objects;
+create policy "Permitir apagar imagens MagManage"
+on storage.objects
+for delete
+to anon
+using (bucket_id = 'magmanage-images');

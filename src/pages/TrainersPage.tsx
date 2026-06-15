@@ -12,11 +12,13 @@ import {
   Edit2,
   KeyRound,
   Trash2,
+  Image as ImageIcon,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { cn } from '../lib/utils'
 import { useStore } from '../store/useStore'
 import { useTranslation } from '../i18n/useTranslation'
+import { uploadImageFile } from '../lib/uploadImage'
 
 const modalidades = ['Jiu-Jitsu', 'Muay Thai', 'Boxe', 'MMA', 'Wrestling', 'Judo', 'Funcional']
 
@@ -43,6 +45,7 @@ export default function TrainersPage() {
     telefone: '',
     especialidade: '',
     academia_id: '1',
+    avatar_url: '',
     senha: '',
     status: 'ativo',
   })
@@ -53,6 +56,7 @@ export default function TrainersPage() {
     telefone: '',
     especialidade: '',
     academia_id: '1',
+    avatar_url: '',
     status: 'ativo',
   })
 
@@ -154,6 +158,7 @@ export default function TrainersPage() {
       telefone: '',
       especialidade: '',
       academia_id: '1',
+      avatar_url: '',
       senha: '',
       status: 'ativo',
     })
@@ -178,7 +183,7 @@ export default function TrainersPage() {
     )
   })
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent, uploadedAvatarUrl?: string) => {
     e.preventDefault()
 
     if (saving) return
@@ -226,6 +231,7 @@ export default function TrainersPage() {
             role: 'treinador',
             especialidade: formData.especialidade,
             academia_id: Number(formData.academia_id || 1),
+            avatar_url: uploadedAvatarUrl ?? formData.avatar_url ?? '',
             status: formData.status,
           },
         ])
@@ -267,12 +273,13 @@ export default function TrainersPage() {
       telefone: trainer.telefone || '',
       especialidade: trainer.especialidade || '',
       academia_id: String(trainer.academia_id || 1),
+      avatar_url: trainer.avatar_url || '',
       status: trainer.status || 'ativo',
     })
     setShowEditModal(true)
   }
 
-  const handleEditTrainer = async (e: React.FormEvent) => {
+  const handleEditTrainer = async (e: React.FormEvent, uploadedAvatarUrl?: string) => {
     e.preventDefault()
 
     if (!selectedTrainer) return
@@ -296,6 +303,7 @@ export default function TrainersPage() {
           telefone: editData.telefone,
           especialidade: editData.especialidade,
           academia_id: Number(editData.academia_id || 1),
+          avatar_url: uploadedAvatarUrl ?? editData.avatar_url ?? '',
           status: editData.status,
         })
         .eq('id', selectedTrainer.id)
@@ -535,10 +543,19 @@ export default function TrainersPage() {
                     <td className="p-4">
                       <div className="flex items-center gap-3">
                         <div
-                          className="w-10 h-10 rounded-full flex items-center justify-center"
+                          className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden"
                           style={{ backgroundColor: 'rgba(34, 197, 94, 0.1)' }}
                         >
-                          <Users className="h-5 w-5 text-primary" />
+                          {trainer.avatar_url ? (
+                            <img
+                              src={trainer.avatar_url}
+                              alt={trainer.nome}
+                              className="h-full w-full object-cover"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <Users className="h-5 w-5 text-primary" />
+                          )}
                         </div>
 
                         <div>
@@ -788,11 +805,32 @@ function TrainerFormModal({
   setData: (data: any) => void
   academias: any[]
   onClose: () => void
-  onSubmit: (e: React.FormEvent) => void
+  onSubmit: (e: React.FormEvent, uploadedAvatarUrl?: string) => void | Promise<void>
   submitText: string
   showPassword: boolean
 }) {
   const { t } = useTranslation()
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState(data.avatar_url || '')
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+
+  const handleFormSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
+
+    try {
+      setUploadingPhoto(true)
+      const avatarUrl = photoFile
+        ? await uploadImageFile(photoFile, 'treinadores')
+        : data.avatar_url
+
+      setData({ ...data, avatar_url: avatarUrl })
+      await onSubmit(event, avatarUrl)
+    } catch (error: any) {
+      alert(error.message || 'Erro ao enviar foto.')
+    } finally {
+      setUploadingPhoto(false)
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -811,7 +849,41 @@ function TrainerFormModal({
           </button>
         </div>
 
-        <form onSubmit={onSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleFormSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1.5">
+              Foto do treinador
+            </label>
+            <div className="flex gap-3">
+              <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-secondary">
+                {previewUrl ? (
+                  <img src={previewUrl} alt="Pré-visualização do treinador" className="h-full w-full object-cover" />
+                ) : (
+                  <ImageIcon className="h-7 w-7 text-muted-foreground" />
+                )}
+              </div>
+              <div className="flex-1">
+                <input
+                  type="file"
+                  accept="image/*"
+                  disabled={saving || uploadingPhoto}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] || null
+                    setPhotoFile(file)
+                    if (file) {
+                      setPreviewUrl(URL.createObjectURL(file))
+                      setData({ ...data, avatar_url: '' })
+                    }
+                  }}
+                  className="w-full text-sm text-muted-foreground file:mr-3 file:rounded-lg file:border-0 file:bg-primary file:px-3 file:py-2 file:text-sm file:font-medium file:text-primary-foreground"
+                />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Escolha uma foto do computador para identificar o treinador.
+                </p>
+              </div>
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-foreground mb-1.5">
               {t('itemName')}
@@ -923,7 +995,7 @@ function TrainerFormModal({
             <select
               value={data.status}
               onChange={(e) => setData({ ...data, status: e.target.value })}
-              disabled={saving}
+              disabled={saving || uploadingPhoto}
               className="w-full px-4 py-2 bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
             >
               <option value="ativo">{t('active')}</option>
@@ -934,7 +1006,7 @@ function TrainerFormModal({
           <div className="flex gap-3 pt-4">
             <button
               type="button"
-              disabled={saving}
+              disabled={saving || uploadingPhoto}
               onClick={onClose}
               className="flex-1 px-4 py-2 border border-border rounded-lg text-foreground hover:bg-accent transition-colors disabled:opacity-50"
             >
@@ -943,10 +1015,10 @@ function TrainerFormModal({
 
             <button
               type="submit"
-              disabled={saving}
+              disabled={saving || uploadingPhoto}
               className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
             >
-              {submitText}
+              {uploadingPhoto ? 'A enviar...' : submitText}
             </button>
           </div>
         </form>

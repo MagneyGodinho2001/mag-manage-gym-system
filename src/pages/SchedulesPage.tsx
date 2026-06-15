@@ -17,16 +17,6 @@ const modalityColors: Record<string, string> = {
   'Funcional': 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
 }
 
-const modalityLegendItems = [
-  { value: 'Jiu-Jitsu', label: 'Jiu-Jitsu' },
-  { value: 'Muay Thai', label: 'Muay Thai' },
-  { value: 'Boxe', label: 'Boxe' },
-  { value: 'MMA', label: 'MMA' },
-  { value: 'Wrestling', label: 'Wrestling' },
-  { value: 'Judo', label: 'Judô' },
-  { value: 'Funcional', label: 'Funcional' },
-]
-
 const formatModalityName = (modality: string) =>
   modality === 'Judo' ? 'Judô' : modality
 
@@ -284,20 +274,29 @@ export default function SchedulesPage() {
         </div>
       </div>
 
-      {/* Legend */}
+      {/* Training preparation */}
       <div className="bg-card border border-border rounded-lg p-4">
-        <h3 className="font-medium text-foreground mb-3">{t('modalityLegend')}</h3>
-        <div className="flex flex-wrap gap-3">
-          {modalityLegendItems.map(({ value, label }) => (
-            <span key={value} className={cn('px-3 py-1.5 rounded-full text-sm border', modalityColors[value])}>
-              {label}
-            </span>
-          ))}
+        <h3 className="font-medium text-foreground mb-3">Preparação do treino</h3>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-lg border border-border bg-secondary/40 p-3 text-sm text-muted-foreground">
+            <p className="font-medium text-foreground">Antes do treino</p>
+            <p className="mt-1">Chegue com pelo menos 10 minutos de antecedência.</p>
+          </div>
+
+          <div className="rounded-lg border border-border bg-secondary/40 p-3 text-sm text-muted-foreground">
+            <p className="font-medium text-foreground">Material</p>
+            <p className="mt-1">Verifique uniforme, luvas, faixa ou outro material da modalidade.</p>
+          </div>
+
+          <div className="rounded-lg border border-border bg-secondary/40 p-3 text-sm text-muted-foreground">
+            <p className="font-medium text-foreground">Inscrição</p>
+            <p className="mt-1">Treinos destacados indicam que já estás inscrito.</p>
+          </div>
         </div>
         <div className="mt-3 pt-3 border-t border-border">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <div className="w-4 h-4 rounded border-2 border-primary" />
-            <span>Treinos em que você está inscrito</span>
+            <CheckCircle2 className="h-4 w-4 text-primary" />
+            <span>Use esta página para consultar o horário semanal e confirmar os treinos disponíveis.</span>
           </div>
         </div>
       </div>
@@ -307,9 +306,9 @@ export default function SchedulesPage() {
         <div className="flex items-start gap-3 mb-4">
           <AlertCircle className="h-5 w-5 text-primary mt-0.5" />
           <div>
-            <h4 className="font-medium text-foreground">Informações importantes</h4>
+            <h4 className="font-medium text-foreground">Informações do horário</h4>
             <p className="text-sm text-muted-foreground mt-1">
-              Consulte os horários, confirme a modalidade e chegue com antecedência para preparar o material.
+              Acompanhe a carga da semana, as suas inscrições e o próximo treino previsto.
             </p>
           </div>
         </div>

@@ -229,6 +229,7 @@ function mapUsuarioToUser(row: any): User {
     phone: row.telefone || row.phone || '',
     role: row.role || 'treinador',
     approvalStatus: row.approval_status || 'aprovado',
+    avatar: row.avatar_url || '',
     createdAt: row.created_at ? new Date(row.created_at) : new Date(),
   }
 }

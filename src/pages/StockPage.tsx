@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useTranslation } from '../i18n/useTranslation'
+import { uploadImageFile } from '../lib/uploadImage'
 
 const categories = [
   { value: 'equipamento', label: 'Equipamento' },
@@ -541,6 +542,9 @@ interface StockItemModalProps {
 
 function StockItemModal({ item, onClose, onSave }: StockItemModalProps) {
   const { t } = useTranslation()
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState(item?.imageUrl || '')
+  const [uploadingImage, setUploadingImage] = useState(false)
   const [formData, setFormData] = useState({
     name: item?.name || '',
     category: item?.category || 'equipamento' as StockItem['category'],
@@ -554,7 +558,20 @@ function StockItemModal({ item, onClose, onSave }: StockItemModalProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    onSave(formData)
+    void (async () => {
+      try {
+        setUploadingImage(true)
+        const imageUrl = imageFile
+          ? await uploadImageFile(imageFile, 'produtos')
+          : formData.imageUrl
+
+        onSave({ ...formData, imageUrl })
+      } catch (error: any) {
+        alert(error.message || 'Erro ao enviar imagem.')
+      } finally {
+        setUploadingImage(false)
+      }
+    })()
   }
 
   return (
@@ -586,8 +603,8 @@ function StockItemModal({ item, onClose, onSave }: StockItemModalProps) {
             <label className="block text-sm font-medium text-foreground mb-1.5">Imagem do produto</label>
             <div className="flex gap-3">
               <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-secondary">
-                {formData.imageUrl ? (
-                  <img src={formData.imageUrl} alt="Pré-visualização do produto" className="h-full w-full object-cover" />
+                {previewUrl ? (
+                  <img src={previewUrl} alt="Pré-visualização do produto" className="h-full w-full object-cover" />
                 ) : (
                   <ImageIcon className="h-7 w-7 text-muted-foreground" />
                 )}
@@ -596,12 +613,29 @@ function StockItemModal({ item, onClose, onSave }: StockItemModalProps) {
                 <input
                   type="url"
                   value={formData.imageUrl}
-                  onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                  onChange={(e) => {
+                    setImageFile(null)
+                    setPreviewUrl(e.target.value)
+                    setFormData({ ...formData, imageUrl: e.target.value })
+                  }}
                   className="w-full px-4 py-2.5 bg-input border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="https://exemplo.com/imagem-do-produto.jpg"
                 />
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] || null
+                    setImageFile(file)
+                    if (file) {
+                      setPreviewUrl(URL.createObjectURL(file))
+                      setFormData({ ...formData, imageUrl: '' })
+                    }
+                  }}
+                  className="mt-2 w-full text-sm text-muted-foreground file:mr-3 file:rounded-lg file:border-0 file:bg-primary file:px-3 file:py-2 file:text-sm file:font-medium file:text-primary-foreground"
+                />
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Cole aqui o link de uma imagem para aparecer no stock e no catálogo.
+                  Escolha uma imagem do computador ou cole um link para aparecer no stock e no catálogo.
                 </p>
               </div>
             </div>
@@ -689,15 +723,17 @@ function StockItemModal({ item, onClose, onSave }: StockItemModalProps) {
             <button
               type="button"
               onClick={onClose}
+              disabled={uploadingImage}
               className="px-4 py-2.5 text-foreground hover:bg-secondary rounded-lg transition-colors"
             >
               {t('cancel')}
             </button>
             <button
               type="submit"
-              className="px-6 py-2.5 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity"
+              disabled={uploadingImage}
+              className="px-6 py-2.5 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
             >
-              {item ? t('save') : t('register')}
+              {uploadingImage ? 'A enviar...' : item ? t('save') : t('register')}
             </button>
           </div>
         </form>
