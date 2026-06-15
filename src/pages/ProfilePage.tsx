@@ -13,7 +13,9 @@ import {
   Phone,
   KeyRound,
   AlertTriangle,
+  Image as ImageIcon,
 } from 'lucide-react'
+import { uploadImageFile } from '../lib/uploadImage'
 
 export default function ProfilePage() {
   const { user, changeUserPassword } = useStore()
@@ -22,11 +24,14 @@ export default function ProfilePage() {
   const [saved, setSaved] = useState(false)
   const [savingProfile, setSavingProfile] = useState(false)
   const [savingPassword, setSavingPassword] = useState(false)
+  const [profileFile, setProfileFile] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState(user?.avatar || '')
 
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
     phone: user?.phone || '',
+    avatar: user?.avatar || '',
   })
 
   const [passwordData, setPasswordData] = useState({
@@ -54,7 +59,7 @@ export default function ProfilePage() {
     setTimeout(() => setSaved(false), 3000)
   }
 
-  const atualizarUsuarioLocal = (novoNome: string, novoTelefone: string) => {
+  const atualizarUsuarioLocal = (novoNome: string, novoTelefone: string, novoAvatar: string) => {
     const emailNormalizado = String(user.email || '').trim().toLowerCase()
 
     const state = useStore.getState()
@@ -63,6 +68,7 @@ export default function ProfilePage() {
       ...user,
       name: novoNome,
       phone: novoTelefone,
+      avatar: novoAvatar,
     }
 
     useStore.setState({
@@ -73,6 +79,7 @@ export default function ProfilePage() {
               ...u,
               name: novoNome,
               phone: novoTelefone,
+              avatar: novoAvatar,
             }
           : u
       ),
@@ -93,6 +100,9 @@ export default function ProfilePage() {
       setSavingProfile(true)
 
       const emailNormalizado = String(user.email || '').trim().toLowerCase()
+      const avatarUrl = profileFile
+        ? await uploadImageFile(profileFile, 'perfis')
+        : formData.avatar
 
       if (user.role === 'treinador' || user.role === 'gestor') {
         const { error } = await supabase
@@ -100,6 +110,7 @@ export default function ProfilePage() {
           .update({
             nome: formData.name,
             telefone: formData.phone,
+            avatar_url: avatarUrl,
           })
           .eq('email', emailNormalizado)
 
@@ -114,6 +125,7 @@ export default function ProfilePage() {
           .update({
             nome: formData.name,
             telefone: formData.phone,
+            foto_url: avatarUrl,
           })
           .eq('email', emailNormalizado)
 
@@ -122,7 +134,10 @@ export default function ProfilePage() {
         }
       }
 
-      atualizarUsuarioLocal(formData.name, formData.phone)
+      setFormData({ ...formData, avatar: avatarUrl })
+      setPreviewUrl(avatarUrl)
+      setProfileFile(null)
+      atualizarUsuarioLocal(formData.name, formData.phone, avatarUrl)
 
       showSavedMessage()
       alert('Perfil atualizado com sucesso.')
@@ -197,10 +212,14 @@ export default function ProfilePage() {
       <div className="bg-card border border-border rounded-xl p-6">
         <div className="flex items-center gap-4 mb-6">
           <div
-            className="flex h-20 w-20 items-center justify-center rounded-full neon-glow"
+            className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full neon-glow"
             style={{ backgroundColor: 'rgba(34, 197, 94, 0.2)' }}
           >
-            <User className="h-10 w-10 text-primary" />
+            {previewUrl ? (
+              <img src={previewUrl} alt={user.name} className="h-full w-full object-cover" />
+            ) : (
+              <User className="h-10 w-10 text-primary" />
+            )}
           </div>
 
           <div>
@@ -224,6 +243,39 @@ export default function ProfilePage() {
         </div>
 
         <form onSubmit={handleSaveProfile} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1.5">
+              Foto do perfil
+            </label>
+            <div className="flex gap-3">
+              <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-secondary">
+                {previewUrl ? (
+                  <img src={previewUrl} alt="Pré-visualização do perfil" className="h-full w-full object-cover" />
+                ) : (
+                  <ImageIcon className="h-7 w-7 text-muted-foreground" />
+                )}
+              </div>
+              <div className="flex-1">
+                <input
+                  type="file"
+                  accept="image/*"
+                  disabled={savingProfile}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] || null
+                    setProfileFile(file)
+                    if (file) {
+                      setPreviewUrl(URL.createObjectURL(file))
+                    }
+                  }}
+                  className="w-full text-sm text-muted-foreground file:mr-3 file:rounded-lg file:border-0 file:bg-primary file:px-3 file:py-2 file:text-sm file:font-medium file:text-primary-foreground"
+                />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Escolhe uma imagem do computador para atualizar a foto do perfil.
+                </p>
+              </div>
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-foreground mb-1.5">
               Nome Completo

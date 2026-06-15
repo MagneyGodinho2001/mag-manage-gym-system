@@ -242,6 +242,7 @@ function mapMembroToUser(row: any): User {
     phone: row.telefone || '',
     role: 'atleta',
     approvalStatus: row.approval_status || 'aprovado',
+    avatar: row.foto_url || '',
     createdAt: row.created_at ? new Date(row.created_at) : new Date(),
   }
 }
@@ -256,6 +257,7 @@ function mapRegistrationFromSupabase(row: any): Registration {
     role: row.role,
     modality: row.modality || '',
     experience: row.experience || '',
+    photoUrl: row.foto_url || '',
     reason: row.reason || '',
     createdAt: row.created_at ? new Date(row.created_at) : new Date(),
   }
@@ -849,6 +851,7 @@ export const useStore = create<AppState>()(
             role: newRegistration.role,
             modality: newRegistration.modality || '',
             experience: newRegistration.experience || '',
+            foto_url: newRegistration.photoUrl || '',
             reason: newRegistration.reason,
           },
         ])
@@ -894,6 +897,7 @@ export const useStore = create<AppState>()(
           phone: registration.phone,
           role: registration.role,
           approvalStatus: 'aprovado',
+          avatar: registration.photoUrl || '',
           createdAt: new Date(),
         }
 
@@ -915,6 +919,7 @@ export const useStore = create<AppState>()(
             modality: registration.modality || 'Mensal',
             startDate: new Date().toISOString().split('T')[0],
             status: 'ativo',
+            photo: registration.photoUrl || '',
             totalPoints: 0,
             createdAt: new Date(),
           }
@@ -934,6 +939,7 @@ export const useStore = create<AppState>()(
                 senha: registration.password,
                 approval_status: 'aprovado',
                 academia_id: 1,
+                foto_url: registration.photoUrl || '',
                 plano: 'Branca',
                 modalidade: registration.modality || 'Mensal',
                 status: 'ativo',
@@ -961,6 +967,7 @@ export const useStore = create<AppState>()(
                 senha: registration.password,
                 approval_status: 'aprovado',
                 academia_id: 1,
+                avatar_url: registration.photoUrl || '',
                 role: 'treinador',
                 especialidade: registration.modality || '',
                 status: 'ativo',

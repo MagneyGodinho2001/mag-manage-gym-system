@@ -2,8 +2,9 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useStore } from '../store/useStore'
 import { cn } from '../lib/utils'
-import { Dumbbell, Eye, EyeOff, AlertCircle, Loader2, CheckCircle2, ArrowLeft } from 'lucide-react'
+import { Dumbbell, Eye, EyeOff, AlertCircle, Loader2, CheckCircle2, ArrowLeft, Image as ImageIcon } from 'lucide-react'
 import { useTranslation } from '../i18n/useTranslation'
+import { uploadImageFile } from '../lib/uploadImage'
 
 export default function RegisterPage() {
   const { t } = useTranslation()
@@ -24,6 +25,8 @@ export default function RegisterPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [profileFile, setProfileFile] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState('')
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -55,8 +58,17 @@ export default function RegisterPage() {
       return
     }
 
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    let photoUrl = ''
+
+    try {
+      if (profileFile) {
+        photoUrl = await uploadImageFile(profileFile, 'inscricoes')
+      }
+    } catch (error: any) {
+      setError(error.message || 'Erro ao enviar foto de perfil.')
+      setLoading(false)
+      return
+    }
 
     const result = await register({
       name: formData.name,
@@ -66,6 +78,7 @@ export default function RegisterPage() {
       role: formData.role,
       modality: formData.modality,
       experience: formData.experience,
+      photoUrl,
       reason: formData.reason,
     })
 
@@ -186,6 +199,37 @@ export default function RegisterPage() {
               />
             </div>
 
+            {/* Profile photo */}
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                Foto do perfil
+              </label>
+              <div className="flex gap-3">
+                <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-secondary">
+                  {previewUrl ? (
+                    <img src={previewUrl} alt="Pré-visualização do perfil" className="h-full w-full object-cover" />
+                  ) : (
+                    <ImageIcon className="h-7 w-7 text-muted-foreground" />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null
+                      setProfileFile(file)
+                      setPreviewUrl(file ? URL.createObjectURL(file) : '')
+                    }}
+                    className="w-full text-sm text-muted-foreground file:mr-3 file:rounded-lg file:border-0 file:bg-primary file:px-3 file:py-2 file:text-sm file:font-medium file:text-primary-foreground"
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Esta foto será usada no teu perfil se o pedido for aprovado.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             {/* Email */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-foreground mb-1.5">
@@ -239,6 +283,8 @@ export default function RegisterPage() {
                 <option value="Boxe">Boxe</option>
                 <option value="MMA">MMA</option>
                 <option value="Wrestling">Wrestling</option>
+                <option value="Judo">Judô</option>
+                <option value="Funcional">Funcional</option>
               </select>
             </div>
 

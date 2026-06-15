@@ -23,6 +23,7 @@ export interface Registration {
   role: 'treinador' | 'atleta'
   modality?: string
   experience?: string
+  photoUrl?: string
   reason: string
   createdAt: Date
 }

@@ -122,6 +122,11 @@ export default function App() {
         { event: '*', schema: 'public', table: 'pagamentos' },
         refreshGymData
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'pedidos_produtos' },
+        refreshGymData
+      )
       .subscribe()
 
     return () => {

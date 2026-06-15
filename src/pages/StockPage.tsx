@@ -43,12 +43,29 @@ export default function StockPage() {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
   const [stockItems, setStockItems] = useState<StockItem[]>([])
   const [movimentosSupabase, setMovimentosSupabase] = useState<any[]>([])
+  const [pedidosProdutos, setPedidosProdutos] = useState<any[]>([])
 const [loading, setLoading] = useState(true)
 
 useEffect(() => {
   carregarProdutos()
   carregarMovimentos()
+  carregarPedidosProdutos()
 }, [])
+
+const carregarPedidosProdutos = async () => {
+  const { data, error } = await supabase
+    .from('pedidos_produtos')
+    .select('*')
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.log('Erro ao buscar pedidos de produtos:', error)
+    return
+  }
+
+  setPedidosProdutos(data || [])
+}
+
 const carregarMovimentos = async () => {
   const { data, error } = await supabase
     .from('movimentos_estoque')
@@ -92,6 +109,73 @@ const carregarProdutos = async () => {
 
   setStockItems(produtosFormatados)
   setLoading(false)
+}
+
+const aprovarPedidoProduto = async (pedido: any) => {
+  const produto = stockItems.find((item) => Number(item.id) === Number(pedido.produto_id))
+
+  if (!produto) {
+    alert('Produto não encontrado no stock.')
+    return
+  }
+
+  const quantidadePedido = Number(pedido.quantidade || 0)
+  const novaQuantidade = Number(produto.quantity || 0) - quantidadePedido
+
+  if (novaQuantidade < 0) {
+    alert('Stock insuficiente para aprovar este pedido.')
+    return
+  }
+
+  const { error: erroProduto } = await supabase
+    .from('produtos')
+    .update({ quantidade: novaQuantidade })
+    .eq('id', Number(pedido.produto_id))
+
+  if (erroProduto) {
+    alert('Erro ao atualizar stock: ' + erroProduto.message)
+    return
+  }
+
+  const { error: erroPedido } = await supabase
+    .from('pedidos_produtos')
+    .update({ status: 'aprovado' })
+    .eq('id', pedido.id)
+
+  if (erroPedido) {
+    alert('Stock atualizado, mas houve erro ao aprovar pedido: ' + erroPedido.message)
+    return
+  }
+
+  await supabase.from('movimentos_estoque').insert([
+    {
+      id: Date.now(),
+      produto_id: Number(pedido.produto_id),
+      tipo: 'saida',
+      quantidade: quantidadePedido,
+      motivo: `Venda aprovada para ${pedido.atleta_nome || pedido.atleta_email || 'atleta'}`,
+      user_id: user?.id || '',
+    },
+  ])
+
+  await carregarProdutos()
+  await carregarMovimentos()
+  await carregarPedidosProdutos()
+  alert('Pedido aprovado e stock atualizado.')
+}
+
+const rejeitarPedidoProduto = async (pedido: any) => {
+  const { error } = await supabase
+    .from('pedidos_produtos')
+    .update({ status: 'rejeitado' })
+    .eq('id', pedido.id)
+
+  if (error) {
+    alert('Erro ao rejeitar pedido: ' + error.message)
+    return
+  }
+
+  await carregarPedidosProdutos()
 }
 
   const canEdit = user?.role === 'gestor'
@@ -365,6 +449,76 @@ const carregarProdutos = async () => {
         </div>
       )}
 
+      {canEdit && (
+        <div className="bg-card border border-border rounded-xl p-4">
+          <div className="flex items-start justify-between gap-3 mb-4">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">Pedidos de produtos</h2>
+              <p className="text-sm text-muted-foreground">
+                Aprove ou rejeite compras enviadas pelos atletas. Ao aprovar, o stock é atualizado automaticamente.
+              </p>
+            </div>
+            <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
+              {pedidosProdutos.filter((pedido) => pedido.status === 'pendente').length} pendente(s)
+            </span>
+          </div>
+
+          {pedidosProdutos.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Ainda não existem pedidos de produtos.</p>
+          ) : (
+            <div className="space-y-3">
+              {pedidosProdutos.map((pedido) => (
+                <div key={pedido.id} className="rounded-lg border border-border bg-secondary/40 p-3">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                      <p className="font-medium text-foreground">{pedido.produto_nome}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {pedido.atleta_nome || pedido.atleta_email} · {pedido.quantidade} unidade(s) · {formatCurrency(pedido.valor_total)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Estado: <span className="font-medium text-foreground">{pedido.status}</span>
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      {pedido.comprovativo_url && (
+                        <a
+                          href={pedido.comprovativo_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="rounded-lg border border-border px-3 py-2 text-sm text-foreground hover:bg-secondary"
+                        >
+                          Ver comprovativo
+                        </a>
+                      )}
+
+                      {pedido.status === 'pendente' && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => aprovarPedidoProduto(pedido)}
+                            className="rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+                          >
+                            Aprovar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => rejeitarPedidoProduto(pedido)}
+                            className="rounded-lg bg-destructive px-3 py-2 text-sm font-medium text-destructive-foreground hover:opacity-90"
+                          >
+                            Rejeitar
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
      {/* Add/Edit Modal */}
 {showModal && (
   <StockItemModal
@@ -611,17 +765,6 @@ function StockItemModal({ item, onClose, onSave }: StockItemModalProps) {
               </div>
               <div className="flex-1">
                 <input
-                  type="url"
-                  value={formData.imageUrl}
-                  onChange={(e) => {
-                    setImageFile(null)
-                    setPreviewUrl(e.target.value)
-                    setFormData({ ...formData, imageUrl: e.target.value })
-                  }}
-                  className="w-full px-4 py-2.5 bg-input border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="https://exemplo.com/imagem-do-produto.jpg"
-                />
-                <input
                   type="file"
                   accept="image/*"
                   onChange={(e) => {
@@ -632,10 +775,10 @@ function StockItemModal({ item, onClose, onSave }: StockItemModalProps) {
                       setFormData({ ...formData, imageUrl: '' })
                     }
                   }}
-                  className="mt-2 w-full text-sm text-muted-foreground file:mr-3 file:rounded-lg file:border-0 file:bg-primary file:px-3 file:py-2 file:text-sm file:font-medium file:text-primary-foreground"
+                  className="w-full text-sm text-muted-foreground file:mr-3 file:rounded-lg file:border-0 file:bg-primary file:px-3 file:py-2 file:text-sm file:font-medium file:text-primary-foreground"
                 />
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Escolha uma imagem do computador ou cole um link para aparecer no stock e no catálogo.
+                  Escolha uma imagem do computador para aparecer no stock e no catálogo.
                 </p>
               </div>
             </div>
